@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# macOS
+.DS_Store
+
+# Internal / sensitive
+transcript.md
+email_thread.md
+plans/
+examples/
+
+# Earlier demo versions
+earlier_versions/

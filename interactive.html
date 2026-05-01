@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cortex Code Agent SDK — Interactive Demo</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Lato:wght@300;400;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+    --sf:#29B5E8;--sf2:#11567F;--sf3:#75CDD7;
+    --bg:#07121F;
+    --s1:#0C1E30;--s2:#112640;--s3:#162D49;
+    --card:var(--s1);
+    --bdr:rgba(255,255,255,.065);--bdr2:rgba(41,181,232,.22);--bdr3:rgba(255,255,255,.12);
+    --txt:#F0F6FF;--t2:#9BB4CC;--t3:#4D6878;
+    --green:#10b981;--green-bg:rgba(16,185,129,.09);
+    --amber:#f59e0b;--amber-bg:rgba(245,158,11,.09);
+    --purple:#a855f7;--purple-bg:rgba(168,85,247,.09);
+    --orange:#FF9F36;--orange-bg:rgba(255,159,54,.09);
+    --red:#ef4444;
+    --font-h:'Montserrat','Arial Black',Arial,sans-serif;
+    --font-b:'Lato',Arial,sans-serif;
+    --font-mono:'SF Mono','Menlo','Consolas',monospace;
+    --gap:15px;--r:12px;--r2:7px;
+}
+
+html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background-image:radial-gradient(circle,rgba(41,181,232,.055) 1px,transparent 1px);background-size:28px 28px}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 90% 55% at 50% -5%,rgba(17,86,127,.2) 0%,transparent 68%)}
+canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:.12}
+#root{position:relative;z-index:1;width:100vw;height:100vh;overflow:hidden}
+
+/* Syntax highlighting */
+.code{background:#04101C;border:1px solid rgba(41,181,232,.13);border-radius:var(--r2);padding:13px 16px;font-family:var(--font-mono);font-size:.82rem;color:#93C5FD;line-height:1.68;overflow-x:auto;white-space:pre;tab-size:4}
+.code .kw{color:#7dd3fc;font-weight:600}
+.code .fn{color:#67e8f9}
+.code .str{color:#86efac}
+.code .cm{color:var(--t3);font-style:italic}
+.code .op{color:#fca5a5}
+.code .dec{color:var(--amber)}
+.code .cls{color:var(--purple)}
+.code .num{color:var(--orange)}
+
+/* Focus ring animation for chat input */
+@keyframes focusGlow{0%{box-shadow:0 0 0 0 rgba(41,181,232,0)}50%{box-shadow:0 0 0 3px rgba(41,181,232,.15)}100%{box-shadow:0 0 0 0 rgba(41,181,232,0)}}
+.chat-input:focus{border-color:rgba(41,181,232,.4)!important;animation:focusGlow .6s ease-out}
+/* Thinking dots animation */
+@keyframes thinkBounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-3px)}}
+/* Pulse animation for terminal running indicator */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+/* Fade-in for new chat messages */
+@keyframes msgFadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.chat-msg-enter{animation:msgFadeIn .25s ease-out}
+/* Suggestion chip hover scale */
+.suggest-chip{transition:all .15s ease}
+.suggest-chip:hover{transform:translateY(-1px);box-shadow:0 2px 8px rgba(41,181,232,.15)}
+/* Run Live button pulse on hover */
+@keyframes runPulse{0%{box-shadow:0 0 0 0 rgba(16,185,129,.3)}70%{box-shadow:0 0 0 8px rgba(16,185,129,0)}100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}}
+.run-live-btn:hover{animation:runPulse 1.2s infinite}
+/* Terminal slide-in from right */
+@keyframes termSlideIn{from{transform:translateX(100%);opacity:.7}to{transform:translateX(0);opacity:1}}
+.demo-terminal{animation:termSlideIn .35s cubic-bezier(.22,1,.36,1)}
+/* Scrollbar styling for dark panels */
+.dark-scroll::-webkit-scrollbar{width:5px}
+.dark-scroll::-webkit-scrollbar-track{background:transparent}
+.dark-scroll::-webkit-scrollbar-thumb{background:rgba(41,181,232,.2);border-radius:3px}
+.dark-scroll::-webkit-scrollbar-thumb:hover{background:rgba(41,181,232,.35)}
+
+/* Terminal markdown — monospace green aesthetic with formatting */
+.term-md{font-family:var(--font-mono);font-size:.72rem;line-height:1.7;color:#4ade80}
+/* Plain terminal lines — no markdown, just green monospace */
+.term-line{font-family:var(--font-mono);font-size:.72rem;line-height:1.7;color:#4ade80;white-space:pre-wrap}
+.term-md h1,.term-md h2,.term-md h3,.term-md h4{font-family:var(--font-mono);color:var(--sf);margin:10px 0 4px;font-weight:700;letter-spacing:.02em}
+.term-md h1{font-size:.82rem;border-bottom:1px solid rgba(41,181,232,.2);padding-bottom:3px}
+.term-md h2{font-size:.78rem}
+.term-md h3{font-size:.74rem;color:#67e8f9}
+.term-md p{margin:3px 0}
+.term-md strong{color:#fff;font-weight:700}
+.term-md em{color:#7dd3fc;font-style:italic}
+.term-md code{color:#fca5a5;font-family:var(--font-mono);font-size:.72rem}
+.term-md pre{background:#050505;border:1px solid rgba(255,255,255,.06);border-radius:4px;padding:8px 12px;overflow-x:auto;margin:6px 0}
+.term-md pre code{color:#93C5FD}
+.term-md ul,.term-md ol{margin:3px 0 3px 16px;padding:0}
+.term-md li{margin:1px 0;color:#4ade80}
+.term-md li::marker{color:var(--sf)}
+.term-md blockquote{border-left:2px solid var(--sf);margin:6px 0;padding:2px 10px;color:var(--sf)}
+.term-md a{color:var(--sf);text-decoration:underline}
+.term-md hr{border:none;border-top:1px solid rgba(255,255,255,.06);margin:8px 0}
+.term-md table{border-collapse:collapse;width:100%;margin:6px 0;font-size:.7rem}
+.term-md th,.term-md td{border:1px solid rgba(74,222,128,.15);padding:3px 8px;text-align:left}
+.term-md th{color:var(--sf);font-weight:700;background:rgba(41,181,232,.06)}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/marked@9.1.6/marked.min.js"></script>
+<script>
+// Capture marked.parse before Babel transpiles — ensures availability in text/babel blocks
+window.__parseMd = (function() {
+  var m = window.marked;
+  if (!m) return function(t) { return t.replace(/</g, '&lt;').replace(/\n/g, '<br>'); };
+  var fn = typeof m.parse === 'function' ? m.parse : (typeof m === 'function' ? m : null);
+  if (!fn) return function(t) { return t.replace(/</g, '&lt;').replace(/\n/g, '<br>'); };
+  if (typeof m.setOptions === 'function') m.setOptions({ breaks: true, gfm: true });
+  return function(t) { return fn(t); };
+})();
+</script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel" data-type="module">
+const { useState, useEffect, useCallback, useRef, useMemo } = React;
+
+/* ─── Snowflake SVG Logo ─── */
+function SfLogo({ label }) {
+  return (
+    <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2L3 7v10l9 5 9-5V7L12 2z" fill="#29B5E8" opacity=".9"/>
+      </svg>
+      <span style={{fontSize:'.66rem',fontWeight:700,color:'var(--sf)',letterSpacing:'.2em',textTransform:'uppercase',fontFamily:'var(--font-b)'}}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+/* ─── Code Block with syntax highlighting ─── */
+function CodeBlock({ code, maxHeight }) {
+  function highlight(src) {
+    return src
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/(#.*$)/gm, '<span class="cm">$1</span>')
+      .replace(/("""[\s\S]*?""")/g, '<span class="cm">$1</span>')
+      .replace(/\b(import|from|async|await|for|in|if|elif|else|return|def|class|as|with|try|except|raise|pass|not|and|or|is|None|True|False|yield)\b/g, '<span class="kw">$1</span>')
+      .replace(/\b(print|isinstance|hasattr|len|enumerate|type|str|int|dict|list|set)\b(?=\s*\()/g, '<span class="fn">$1</span>')
+      .replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, '<span class="str">$1</span>')
+      .replace(/\b(\d+\.?\d*)\b/g, '<span class="num">$1</span>');
+  }
+  return (
+    <div className="code" style={{maxHeight: maxHeight || 'none', overflowY: maxHeight ? 'auto' : 'visible'}}
+         dangerouslySetInnerHTML={{__html: highlight(code)}} />
+  );
+}
+
+/* ─── Slide wrapper ─── */
+function Slide({ active, direction, children, padding }) {
+  const style = {
+    position:'absolute',top:0,left:0,width:'100%',height:'100%',
+    display:'flex',flexDirection:'column',
+    padding: padding || '40px 64px 72px',
+    opacity: active ? 1 : 0,
+    pointerEvents: active ? 'all' : 'none',
+    transition:'opacity .38s ease, transform .38s ease',
+    transform: active ? 'translateX(0)' : direction === 'prev' ? 'translateX(-44px)' : 'translateX(44px)',
+  };
+  return <div style={style}>{children}</div>;
+}
+
+/* ─── Card component ─── */
+function Card({ title, titleColor, highlight: hl, children, style: extraStyle }) {
+  return (
+    <div style={{
+      background: hl ? 'var(--s2)' : 'var(--s1)',
+      border: `1px solid ${hl ? 'var(--bdr2)' : 'var(--bdr)'}`,
+      borderRadius:'var(--r)',padding:'16px 18px',
+      boxShadow:'0 2px 10px rgba(0,0,0,.22)',
+      ...extraStyle
+    }}>
+      {title && <div style={{fontSize:'.82rem',fontWeight:700,color:titleColor||'var(--sf)',textTransform:'uppercase',letterSpacing:'.1em',marginBottom:7,fontFamily:'var(--font-b)'}}>{title}</div>}
+      {children}
+    </div>
+  );
+}
+
+/* ─── Bullet list ─── */
+function Bullets({ items }) {
+  return (
+    <ul style={{listStyle:'none',padding:0}}>
+      {items.map((item, i) => (
+        <li key={i} style={{fontSize:'.92rem',color:'var(--t2)',padding:'3.5px 0 3.5px 17px',position:'relative',lineHeight:1.52,fontFamily:'var(--font-b)'}}>
+          <span style={{position:'absolute',left:0,color:'var(--sf)',fontWeight:700,fontSize:'1.05rem',lineHeight:1.4}}>›</span>
+          <span dangerouslySetInnerHTML={{__html: item}} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/* ─── Architecture Flow Node ─── */
+function FlowDiagram({ nodes }) {
+  return (
+    <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+      {nodes.map((n, i) => (
+        <React.Fragment key={i}>
+          <div style={{background:'rgba(17,86,127,.28)',border:'1px solid var(--bdr2)',borderRadius:7,padding:'8px 14px',fontSize:'.83rem',fontWeight:600,color:'var(--txt)',whiteSpace:'nowrap'}}>{n}</div>
+          {i < nodes.length - 1 && <span style={{color:'var(--sf)',fontSize:'1.2rem',fontWeight:700}}>→</span>}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Pill badge ─── */
+function Pill({ text, color }) {
+  const colors = {
+    green: {bg:'var(--green-bg)',fg:'var(--green)',bdr:'rgba(16,185,129,.3)'},
+    blue: {bg:'rgba(41,181,232,.1)',fg:'var(--sf)',bdr:'rgba(41,181,232,.25)'},
+    purple: {bg:'var(--purple-bg)',fg:'var(--purple)',bdr:'rgba(168,85,247,.3)'},
+    amber: {bg:'var(--amber-bg)',fg:'var(--amber)',bdr:'rgba(245,158,11,.3)'},
+  };
+  const c = colors[color] || colors.blue;
+  return <span style={{display:'inline-block',padding:'2px 7px',borderRadius:4,fontSize:'.65rem',fontWeight:700,marginLeft:6,verticalAlign:'middle',letterSpacing:'.03em',background:c.bg,color:c.fg,border:`1px solid ${c.bdr}`}}>{text}</span>;
+}
+
+/* ─── Run Live Button (for demo slides) ─── */
+function RunLiveButton({ demo, onRun }) {
+  return (
+    <button
+      className="run-live-btn"
+      onClick={() => onRun(demo)}
+      style={{
+        marginLeft:'auto',flexShrink:0,
+        display:'flex',alignItems:'center',gap:6,
+        padding:'7px 16px',borderRadius:8,
+        background:'rgba(16,185,129,.12)',border:'1px solid rgba(16,185,129,.35)',
+        color:'var(--green)',fontSize:'.72rem',fontWeight:700,fontFamily:'var(--font-b)',
+        letterSpacing:'.04em',cursor:'pointer',
+        transition:'all .18s ease',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(16,185,129,.22)'; e.currentTarget.style.borderColor = 'rgba(16,185,129,.55)'; }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(16,185,129,.12)'; e.currentTarget.style.borderColor = 'rgba(16,185,129,.35)'; }}
+    >
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2l10 6-10 6V2z"/></svg>
+      Run Live
+    </button>
+  );
+}
+
+/* ─── Markdown parser — uses pre-captured window.__parseMd ─── */
+const parseMd = window.__parseMd;
+
+/* ─── Demo name mapping ─── */
+const DEMO_SCRIPTS = {
+  single_turn: 'demo_single_turn.py',
+  multi_turn: 'demo_multi_turn.py',
+  structured_output: 'demo_structured_output.py',
+      chat_embed: 'demo_chat_embed.py',
+};
+
+/* ─── Demo Terminal Panel ─── */
+function DemoTerminal({ demo, onClose }) {
+  const [running, setRunning] = useState(true);
+  const [error, setError] = useState(null);
+  const [renderKey, setRenderKey] = useState(0);
+  const scrollRef = useRef(null);
+  // Segments: [{type:'line',text:''}, {type:'md',text:''}, ...]
+  const segmentsRef = useRef([]);
+  const scriptName = DEMO_SCRIPTS[demo] || `${demo}.py`;
+
+  function appendLine(text) {
+    segmentsRef.current = [...segmentsRef.current, {type:'line', text}];
+  }
+  function appendMd(text) {
+    const segs = segmentsRef.current;
+    const last = segs[segs.length - 1];
+    if (last && last.type === 'md') {
+      // Append to existing md segment (mutate for perf, we re-render via key)
+      last.text += text;
+    } else {
+      segmentsRef.current = [...segs, {type:'md', text}];
+    }
+  }
+
+  // Render segments into HTML
+  const renderedHtml = useMemo(() => {
+    void renderKey;
+    const segs = segmentsRef.current;
+    if (!segs.length) return '';
+    return segs.map(seg => {
+      if (seg.type === 'line') {
+        const escaped = seg.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        return `<div class="term-line">${escaped}</div>`;
+      }
+      if (seg.type === 'tool') {
+        const escaped = seg.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        return `<div class="term-line" style="color:var(--sf)">▸ Tool: ${escaped}</div>`;
+      }
+      // md segment — parse with marked
+      try {
+        return parseMd(seg.text);
+      } catch(e) {
+        return seg.text.replace(/</g,'&lt;').replace(/\n/g,'<br>');
+      }
+    }).join('');
+  }, [renderKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let updateTimer = null;
+    // Batch UI updates — re-render at most every 80ms for smooth streaming
+    function scheduleRender() {
+      if (!updateTimer) {
+        updateTimer = setTimeout(() => {
+          updateTimer = null;
+          if (!cancelled) setRenderKey(k => k + 1);
+        }, 80);
+      }
+    }
+    async function run() {
+      try {
+        const response = await fetch('/api/demo/run', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({demo})
+        });
+        if (!response.ok) {
+          setError(`HTTP ${response.status}: ${response.statusText}`);
+          setRunning(false);
+          return;
+        }
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+          const {done, value} = await reader.read();
+          if (done || cancelled) break;
+          buffer += decoder.decode(value, {stream: true});
+          const parts = buffer.split('\n');
+          buffer = parts.pop();
+          for (const line of parts) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.line !== undefined) {
+                  if (data.line.startsWith('>> Tool call:')) {
+                    const toolName = data.line.replace('>> Tool call: ', '');
+                    segmentsRef.current = [...segmentsRef.current, {type:'tool', text:toolName}];
+                  } else {
+                    appendLine(data.line);
+                  }
+                  scheduleRender();
+                } else if (data.text !== undefined) {
+                  appendMd(data.text);
+                  scheduleRender();
+                } else if (data.exit_code !== undefined || data.status === 'complete' || data.status === 'done') {
+                  setRunning(false);
+                } else if (data.error) {
+                  setError(data.error);
+                  setRunning(false);
+                }
+              } catch(e) {}
+            } else if (line.startsWith('event: done')) {
+              setRunning(false);
+            }
+          }
+        }
+      } catch(e) {
+        if (!cancelled) {
+          setError('Could not connect to backend at localhost:8765');
+          setRunning(false);
+        }
+      }
+      // Final render to catch any trailing content
+      if (!cancelled) setRenderKey(k => k + 1);
+    }
+    run();
+    return () => { cancelled = true; if (updateTimer) clearTimeout(updateTimer); };
+  }, [demo]);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [renderKey]);
+
+  return (
+    <div className="demo-terminal" style={{
+      width:'42vw',flexShrink:0,height:'100vh',
+      background:'#0c0c0c',
+      borderLeft:'1px solid rgba(255,255,255,.06)',
+      display:'flex',flexDirection:'column',
+      zIndex:80,
+    }}>
+      {/* macOS-style title bar */}
+      <div style={{display:'flex',alignItems:'center',padding:'8px 14px',background:'#1c1c1c',borderBottom:'1px solid rgba(255,255,255,.06)',flexShrink:0,position:'relative'}}>
+        {/* Traffic light dots */}
+        <div style={{display:'flex',gap:6,alignItems:'center'}}>
+          <button onClick={onClose} title="Close" style={{width:12,height:12,borderRadius:'50%',background:'#ff5f57',border:'none',cursor:'pointer',padding:0,transition:'opacity .15s'}}
+            onMouseEnter={e => e.currentTarget.style.opacity='.8'} onMouseLeave={e => e.currentTarget.style.opacity='1'} />
+          <div style={{width:12,height:12,borderRadius:'50%',background:'#febc2e'}} />
+          <div style={{width:12,height:12,borderRadius:'50%',background:'#28c840'}} />
+        </div>
+        {/* Centered title */}
+        <div style={{position:'absolute',left:'50%',transform:'translateX(-50%)',display:'flex',alignItems:'center',gap:6}}>
+          <span style={{fontSize:'.66rem',color:'rgba(255,255,255,.5)',fontFamily:'var(--font-mono)'}}>
+            python3 {scriptName}
+          </span>
+          {running && (
+            <span style={{display:'inline-block',width:6,height:6,borderRadius:'50%',background:'var(--green)',animation:'pulse 1s infinite',boxShadow:'0 0 6px var(--green)'}} />
+          )}
+          {!running && !error && (
+            <span style={{fontSize:'.58rem',color:'var(--green)',fontFamily:'var(--font-mono)',fontWeight:600}}>EXIT 0</span>
+          )}
+        </div>
+      </div>
+      {/* Terminal output */}
+      <div ref={scrollRef} className="dark-scroll" style={{flex:1,overflow:'auto',padding:'10px 16px',background:'#0c0c0c'}}>
+        {error && <div style={{color:'#ff5f57',fontFamily:'var(--font-mono)',fontSize:'.72rem',marginBottom:8}}>$ error: {error}</div>}
+        {renderedHtml ? (
+          <div className="term-md" dangerouslySetInnerHTML={{__html: renderedHtml}} />
+        ) : (
+          running && !error && (
+            <div style={{color:'rgba(255,255,255,.3)',fontFamily:'var(--font-mono)',fontSize:'.72rem'}}>
+              <span style={{color:'var(--green)'}}>$</span> python3 {scriptName}<br/>
+              <span style={{color:'rgba(255,255,255,.2)'}}>Waiting for output...</span>
+            </div>
+          )
+        )}
+        {running && <span style={{fontFamily:'var(--font-mono)',color:'#4ade80'}}>█</span>}
+      </div>
+    </div>
+  );
+}
+
+  /* ─── LiveChat component ─── */
+function LiveChat({ chatState }) {
+  const {messages, setMessages, sessionId} = chatState;
+  const [input, setInput] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [backendAvailable, setBackendAvailable] = useState(null);
+  const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
+
+  const suggestions = [
+    "Review threat_report.py for bugs in the security event pipeline",
+    "Summarize the security posture from the threat data",
+    "Which campaigns have the highest escalation rate?",
+    "Flag anomalous threat campaigns and write tests",
+  ];
+
+  // Check backend on mount
+  useEffect(() => {
+    fetch('/api/chat', {method:'OPTIONS'}).then(() => setBackendAvailable(true)).catch(() => setBackendAvailable(false));
+  }, []);
+
+  useEffect(() => {
+    if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({behavior:'smooth'});
+  }, [messages, isStreaming]);
+
+  async function sendMessage(text) {
+    if (!text.trim() || isStreaming) return;
+    const userMsg = {role:'user', content:text.trim(), toolCalls:[]};
+    setMessages(prev => [...prev, userMsg]);
+    setInput('');
+    setIsStreaming(true);
+
+    setMessages(prev => [...prev, {role:'assistant', content:'', toolCalls:[]}]);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({message: text.trim(), session_id: sessionId})
+      });
+
+      if (!response.ok) {
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {role:'assistant', content:`Error: ${response.status} ${response.statusText}`, toolCalls:[]};
+          return updated;
+        });
+        setIsStreaming(false);
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let accText = '';
+      let accTools = [];
+
+      while (true) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, {stream: true});
+
+        const eventBlocks = buffer.split('\n\n');
+        buffer = eventBlocks.pop();
+
+        for (const block of eventBlocks) {
+          const lines = block.split('\n');
+          let eventType = '';
+          let dataStr = '';
+          for (const line of lines) {
+            if (line.startsWith('event: ')) eventType = line.slice(7).trim();
+            if (line.startsWith('data: ')) dataStr = line.slice(6);
+          }
+          if (!dataStr) continue;
+          try {
+            const data = JSON.parse(dataStr);
+            if (eventType === 'text' && data.text) {
+              accText += data.text;
+            } else if (eventType === 'tool_call' && data.tool) {
+              accTools = [...accTools, data.tool];
+            } else if (eventType === 'done') {
+              // stream complete
+            } else if (!eventType && data.text) {
+              accText += data.text;
+            } else if (!eventType && data.tool) {
+              accTools = [...accTools, data.tool];
+            }
+          } catch(e) {}
+
+          setMessages(prev => {
+            const updated = [...prev];
+            updated[updated.length - 1] = {role:'assistant', content:accText, toolCalls:[...accTools]};
+            return updated;
+          });
+        }
+      }
+    } catch(e) {
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {role:'assistant', content:'Could not connect to backend. Make sure the server is running at localhost:8765.', toolCalls:[]};
+        return updated;
+      });
+    }
+    setIsStreaming(false);
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      sendMessage(input);
+    }
+  }
+
+  return (
+    <div style={{background:'#0a0f1a',border:'1px solid rgba(255,255,255,.08)',borderRadius:14,overflow:'hidden',maxWidth:540,width:'100%',display:'flex',flexDirection:'column',maxHeight:420}}>
+      {/* Header */}
+      <div style={{background:'rgba(41,181,232,.08)',borderBottom:'1px solid rgba(255,255,255,.06)',padding:'10px 16px',display:'flex',alignItems:'center',gap:10,flexShrink:0}}>
+        <div style={{width:28,height:28,borderRadius:'50%',background:'linear-gradient(135deg,#29B5E8,#11567F)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'.8rem',fontWeight:800,color:'white'}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2L3 7v10l9 5 9-5V7L12 2z"/></svg>
+        </div>
+        <div>
+          <div style={{fontSize:'.78rem',fontWeight:700,color:'var(--txt)'}}>Security Assistant</div>
+          <div style={{fontSize:'.6rem',color:backendAvailable === false ? 'var(--red)' : 'var(--green)'}}>
+            {backendAvailable === false ? 'Backend offline' : 'Powered by Cortex Code Agent SDK'}
+          </div>
+        </div>
+      </div>
+
+      {/* Messages area */}
+      <div className="dark-scroll" style={{flex:1,overflow:'auto',padding:'14px 16px',display:'flex',flexDirection:'column',gap:10,minHeight:140}}>
+        {backendAvailable === false && messages.length === 0 && (
+          <div style={{textAlign:'center',padding:'24px 16px'}}>
+            <div style={{fontSize:'.82rem',color:'var(--t2)',marginBottom:8}}>Backend not connected</div>
+            <div style={{fontSize:'.72rem',color:'var(--t3)',lineHeight:1.6}}>
+              Start the Python backend server at <span style={{color:'var(--sf)',fontFamily:'var(--font-mono)',fontSize:'.7rem'}}>localhost:8765</span> to enable live chat.
+            </div>
+          </div>
+        )}
+
+        {messages.map((msg, i) => (
+          <div key={i} className="chat-msg-enter" style={{alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start', maxWidth:'85%'}}>
+            {/* Tool call pills */}
+            {msg.toolCalls && msg.toolCalls.length > 0 && (
+              <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:4}}>
+                {msg.toolCalls.map((tool, ti) => (
+                  <span key={ti} style={{
+                    display:'inline-flex',alignItems:'center',gap:4,
+                    padding:'2px 8px',borderRadius:10,fontSize:'.6rem',fontWeight:600,
+                    background:'rgba(41,181,232,.08)',color:'var(--sf)',border:'1px solid rgba(41,181,232,.2)',
+                    fontFamily:'var(--font-mono)'
+                  }}>
+                    <svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 3l1-1h3l1 1v1H14v2h-.5l-1 8H3.5l-1-8H2V4h3.5V3zm2 0v1h1V3h-1z"/></svg>
+                    {tool}
+                  </span>
+                ))}
+              </div>
+            )}
+            <div style={{
+              background: msg.role === 'user' ? 'rgba(0,120,212,.25)' : 'var(--s2)',
+              border: `1px solid ${msg.role === 'user' ? 'rgba(0,120,212,.3)' : 'var(--bdr)'}`,
+              borderRadius: msg.role === 'user' ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
+              padding:'8px 12px',fontSize:'.74rem',
+              color: msg.role === 'user' ? 'var(--txt)' : 'var(--t2)',
+              lineHeight:1.6,whiteSpace:'pre-wrap'
+            }}>
+              {msg.content}
+              {msg.role === 'assistant' && !msg.content && isStreaming && i === messages.length - 1 && (
+                <span style={{color:'var(--sf)'}}>
+                  {messages.filter(m => m.role === 'assistant').length <= 1 ? 'Initializing session' : 'Thinking'}<ThinkingDots /><span style={{opacity:.5}}>|</span>
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Suggestion chips */}
+      {messages.length === 0 && backendAvailable !== false && (
+        <div style={{padding:'0 16px 8px',display:'flex',flexWrap:'wrap',gap:5}}>
+          {suggestions.map((s, i) => (
+            <button key={i} className="suggest-chip" onClick={() => sendMessage(s)} style={{
+              background:'rgba(41,181,232,.06)',border:'1px solid rgba(41,181,232,.18)',
+              borderRadius:8,padding:'5px 10px',fontSize:'.64rem',color:'var(--sf)',
+              cursor:'pointer',fontFamily:'var(--font-b)',fontWeight:500,lineHeight:1.4,
+              textAlign:'left',maxWidth:'48%',
+            }}
+            onMouseEnter={e => {e.currentTarget.style.background='rgba(41,181,232,.14)';e.currentTarget.style.borderColor='rgba(41,181,232,.35)'}}
+            onMouseLeave={e => {e.currentTarget.style.background='rgba(41,181,232,.06)';e.currentTarget.style.borderColor='rgba(41,181,232,.18)'}}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Input */}
+      <div style={{borderTop:'1px solid rgba(255,255,255,.06)',padding:'10px 12px',display:'flex',gap:8,flexShrink:0}}>
+        <input
+          className="chat-input"
+          ref={inputRef}
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={backendAvailable === false ? 'Backend offline...' : 'Ask about security threats...'}
+          disabled={backendAvailable === false}
+          style={{
+            flex:1,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)',
+            borderRadius:8,padding:'8px 12px',fontSize:'.76rem',color:'var(--txt)',
+            fontFamily:'var(--font-b)',outline:'none',transition:'border-color .2s, box-shadow .2s',
+            opacity: backendAvailable === false ? 0.4 : 1,
+          }}
+        />
+        <button
+          onClick={() => sendMessage(input)}
+          disabled={!input.trim() || isStreaming || backendAvailable === false}
+          style={{
+            background: input.trim() && !isStreaming ? 'var(--sf)' : 'rgba(41,181,232,.15)',
+            border:'none',borderRadius:8,padding:'8px 14px',
+            color: input.trim() && !isStreaming ? 'white' : 'var(--t3)',
+            fontSize:'.72rem',fontWeight:700,cursor: input.trim() && !isStreaming ? 'pointer' : 'not-allowed',
+            fontFamily:'var(--font-b)',transition:'all .2s',
+            display:'flex',alignItems:'center',gap:5,
+          }}
+          onMouseEnter={e => { if (input.trim() && !isStreaming) e.currentTarget.style.background = '#1da1cc'; }}
+          onMouseLeave={e => { if (input.trim() && !isStreaming) e.currentTarget.style.background = 'var(--sf)'; }}
+        >
+          Send
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Thinking dots animation ─── */
+function ThinkingDots() {
+  const [dots, setDots] = useState('');
+  useEffect(() => {
+    const t = setInterval(() => setDots(p => p.length >= 3 ? '' : p + '.'), 400);
+    return () => clearInterval(t);
+  }, []);
+  return <span>{dots}</span>;
+}
+
+/* ════════════════════════════════════════════
+   SLIDE CONTENT DEFINITIONS
+   ════════════════════════════════════════════ */
+
+/* Slide 1: Title */
+function SlideTitle() {
+  return (
+    <div style={{display:'flex',flexDirection:'column',justifyContent:'center',height:'100%',maxWidth:960}}>
+      <div style={{display:'flex',alignItems:'center',gap:20,marginBottom:40}}>
+        <svg width="130" height="32" viewBox="0 0 200 50">
+          <path d="M32 4L35 10L32 16L29 10Z" fill="#29B5E8"/>
+          <path d="M32 34L35 40L32 46L29 40Z" fill="#29B5E8"/>
+          <circle cx="32" cy="25" r="6" fill="#29B5E8"/>
+          <line x1="32" y1="16" x2="32" y2="19" stroke="#29B5E8" strokeWidth="2.5"/>
+          <line x1="32" y1="31" x2="32" y2="34" stroke="#29B5E8" strokeWidth="2.5"/>
+          <line x1="24" y1="20" x2="26" y2="21.5" stroke="#29B5E8" strokeWidth="2.5"/>
+          <line x1="38" y1="28.5" x2="40" y2="30" stroke="#29B5E8" strokeWidth="2.5"/>
+          <line x1="24" y1="30" x2="26" y2="28.5" stroke="#29B5E8" strokeWidth="2.5"/>
+          <line x1="38" y1="21.5" x2="40" y2="20" stroke="#29B5E8" strokeWidth="2.5"/>
+          <text x="58" y="32" fontFamily="Inter" fontSize="22" fontWeight="600" fill="#29B5E8">snowflake</text>
+        </svg>
+        <span style={{fontSize:'1.2rem',color:'var(--t3)'}}>+</span>
+        <div style={{padding:'8px 20px',background:'rgba(0,120,212,.12)',border:'1px solid rgba(0,120,212,.25)',borderRadius:10,fontSize:'1rem',fontWeight:800,color:'#00BCF2',letterSpacing:'-.01em',fontFamily:'var(--font-h)'}}>SNOWFLAKE</div>
+      </div>
+      <div style={{fontSize:'.76rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'var(--t3)',marginBottom:8}}>
+        Cortex Code Agent SDK &middot; Technical Deep-Dive
+      </div>
+      <h1 style={{fontFamily:'var(--font-h)',fontSize:'3.2rem',fontWeight:900,lineHeight:1.04,color:'var(--txt)',marginBottom:14,letterSpacing:'-.02em'}}>
+        Embedding AI-Powered<br/>Development into <span style={{color:'var(--sf)'}}>Your Chat Platform</span>
+      </h1>
+      <p style={{fontSize:'1rem',color:'var(--t2)',marginBottom:20,lineHeight:1.52,maxWidth:680,marginTop:12}}>
+        The same Cortex Code engine that powers Snowflake's interactive coding assistant — available as a Python & TypeScript SDK for embedding Snowflake-native AI directly into your security workflows.
+      </p>
+      <div style={{display:'flex',gap:22,flexWrap:'wrap',marginTop:26}}>
+        <div style={{fontSize:'.74rem',color:'var(--t3)'}}><strong style={{color:'var(--t2)'}}>Date</strong> &middot; April 2026</div>
+        <div style={{fontSize:'.74rem',color:'var(--t3)'}}><strong style={{color:'var(--t2)'}}>Presenter</strong> &middot; Rohit Bhamidipati, Snowflake</div>
+        <div style={{fontSize:'.74rem',color:'var(--t3)'}}><strong style={{color:'var(--t2)'}}>Audience</strong> &middot; Engineering Teams</div>
+      </div>
+    </div>
+  );
+}
+
+/* Slide 2: What is Cortex Code Agent SDK */
+function SlideWhatIs() {
+  return (
+    <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
+      <SfLogo label="Snowflake · Cortex Code Agent SDK" />
+      <h2 style={{fontFamily:'var(--font-h)',fontSize:'2.0rem',fontWeight:800,marginBottom:4,letterSpacing:'-.015em',lineHeight:1.18}}>
+        What is the <span style={{color:'var(--sf)'}}>Cortex Code Agent SDK</span>?
+      </h2>
+      <div style={{width:40,height:2,background:'linear-gradient(90deg,var(--sf) 0%,rgba(41,181,232,.15) 100%)',borderRadius:1,margin:'7px 0 15px'}} />
+      <p style={{fontSize:'.96rem',color:'var(--t2)',marginBottom:18,lineHeight:1.55}}>
+        The same engine behind Cortex Code — Snowflake's interactive AI coding assistant — packaged as an embeddable SDK.
+      </p>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,flex:1}}>
+        <Card title="Core Capabilities" highlight>
+          <Bullets items={[
+            '<strong>Same engine as Cortex Code</strong> — identical AI models, tool infrastructure, and reasoning',
+            '<strong>Python & TypeScript SDKs</strong> — async-first with full streaming support',
+            '<strong>Zero tool implementation</strong> — file I/O, shell, SQL execution, code search all built in',
+            '<strong>Structured output</strong> — JSON Schema enforcement for machine-readable results',
+            '<strong>Multi-turn sessions</strong> — context persists across conversation turns',
+          ]} />
+        </Card>
+        <div style={{display:'flex',flexDirection:'column',gap:14}}>
+          <Card title="SDK Interface" titleColor="var(--green)">
+            <CodeBlock code={`from cortex_code_agent_sdk import (
+    query,                    # single-turn
+    CortexCodeSDKClient,      # multi-turn
+    CortexCodeAgentOptions,   # configuration
+    AssistantMessage,         # streamed response
+    ResultMessage,            # completion signal
+)`} />
+          </Card>
+          <Card title="Why It Matters for Your Team">
+            <Bullets items={[
+              '<strong>Single HTTPS endpoint</strong> — no infrastructure to manage',
+              '<strong>Snowflake security model</strong> — RBAC, audit, governance built in',
+              '<strong>No prompt engineering needed</strong> — tools handle code/data operations',
+            ]} />
+          </Card>
+          <div style={{background:'rgba(168,85,247,.05)',border:'1px solid rgba(168,85,247,.18)',borderRadius:9,padding:'11px 15px'}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:5}}>
+              <span style={{fontSize:'.65rem',fontWeight:700,color:'var(--purple)',background:'rgba(168,85,247,.1)',border:'1px solid rgba(168,85,247,.3)',borderRadius:4,padding:'2px 7px',letterSpacing:'.06em'}}>SKILLS</span>
+              <div style={{fontSize:'.78rem',color:'var(--txt)',fontWeight:600}}>"Is it compatible with Claude Code skills?"</div>
+            </div>
+            <div style={{fontSize:'.86rem',color:'var(--t2)',lineHeight:1.55}}>Yes — Cortex Code skills follow a similar markdown-based format. Existing Claude Code skills can be ported with minor adjustments. The SDK <strong>augments</strong> your existing AI tools by routing Snowflake-specific tasks through Snowflake's infrastructure.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Slide 3: Architecture Fit */
+function SlideArchitecture() {
+  return (
+    <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
+      <SfLogo label="Snowflake · Architecture" />
+      <h2 style={{fontFamily:'var(--font-h)',fontSize:'2.0rem',fontWeight:800,marginBottom:4,letterSpacing:'-.015em',lineHeight:1.18}}>
+        Customer <span style={{color:'var(--sf)'}}>Architecture Fit</span>
+      </h2>
+      <div style={{width:40,height:2,background:'linear-gradient(90deg,var(--sf) 0%,rgba(41,181,232,.15) 100%)',borderRadius:1,margin:'7px 0 18px'}} />
+
+      {/* Architecture Diagram */}
+      <div style={{background:'var(--s1)',border:'1px solid var(--bdr)',borderRadius:14,padding:28,display:'flex',flexDirection:'column',gap:20}}>
+        {/* Flow */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:0,flexWrap:'wrap'}}>
+          {[
+            {label:'Chat UI',sub:'User-facing chat',color:'#0078D4'},
+            {label:'Cortex Code Agent SDK',sub:'Python / TypeScript',color:'var(--sf)'},
+            {label:'Cortex REST / Agents API',sub:'Single HTTPS endpoint',color:'var(--sf2)'},
+            {label:'Snowflake Data',sub:'Tables, stages, logs',color:'var(--green)'},
+          ].map((n, i) => (
+            <React.Fragment key={i}>
+              <div style={{background:`${n.color}15`,border:`1px solid ${n.color}40`,borderRadius:12,padding:'14px 20px',textAlign:'center',minWidth:160}}>
+                <div style={{fontSize:'1rem',fontWeight:700,color:'var(--txt)',fontFamily:'var(--font-h)'}}>{n.label}</div>
+                <div style={{fontSize:'.68rem',color:'var(--t2)',marginTop:3}}>{n.sub}</div>
+              </div>
+              {i < 3 && (
+                <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'0 8px'}}>
+                  <svg width="40" height="20" viewBox="0 0 40 20">
+                    <defs><marker id={`ah${i}`} markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0 0L8 3L0 6" fill="var(--sf)"/></marker></defs>
+                    <line x1="0" y1="10" x2="32" y2="10" stroke="var(--sf)" strokeWidth="1.5" markerEnd={`url(#ah${i})`}/>
+                  </svg>
+                  <span style={{fontSize:'.55rem',color:'var(--t3)',marginTop:2}}>HTTPS</span>
+                </div>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+
+        {/* Key points */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:14,marginTop:8}}>
+          <Card title="Single Endpoint" titleColor="var(--green)" style={{padding:'12px 14px'}}>
+            <div style={{fontSize:'.9rem',color:'var(--t2)',lineHeight:1.55}}>One HTTPS call. No WebSocket management, no streaming infrastructure. The SDK handles connection lifecycle.</div>
+          </Card>
+          <Card title="Snowflake Security" titleColor="var(--sf)" style={{padding:'12px 14px'}}>
+            <div style={{fontSize:'.9rem',color:'var(--t2)',lineHeight:1.55}}>RBAC via Snowflake roles — no separate identity system. Audit trails, governance, and access control are native.</div>
+          </Card>
+          <Card title="Leverage Existing Investment" titleColor="var(--amber)" style={{padding:'12px 14px'}}>
+            <div style={{fontSize:'.9rem',color:'var(--t2)',lineHeight:1.55}}>Your team already has a Snowflake connector for structured + unstructured data. The SDK builds on that investment.</div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Slide 4: Demo 1 — Single-Turn Bug Fix */
+function SlideDemo1({ onRunDemo }) {
+  const code = `async for message in query(
+    prompt="Review threat_report.py for bugs in the "
+           "security event pipeline. Fix any issues "
+           "you find.",
+    options=CortexCodeAgentOptions(
+        cwd=".",
+        allowed_tools=["Read", "Edit", "Bash"],
+    ),
+):
+    if isinstance(message, AssistantMessage):
+        for block in message.content:
+            if hasattr(block, "text"):
+                print(block.text, end="")
+            elif hasattr(block, "name"):
+                print(f">> Tool call: {block.name}")
+
+    elif isinstance(message, ResultMessage):
+        print(f"Done: {message.subtype}")`;
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
+      <SfLogo label="Snowflake · Demo 1" />
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12}}>
+        <h2 style={{fontFamily:'var(--font-h)',fontSize:'2.0rem',fontWeight:800,letterSpacing:'-.015em',lineHeight:1.18,margin:0}}>
+          Demo 1: <span style={{color:'var(--sf)'}}>Single-Turn Bug Fix</span>
+        </h2>
+        <Pill text="demo_single_turn.py" color="blue" />
+        <RunLiveButton demo="single_turn" onRun={onRunDemo} />
+      </div>
+      <div style={{width:40,height:2,background:'linear-gradient(90deg,var(--sf) 0%,rgba(41,181,232,.15) 100%)',borderRadius:1,margin:'0 0 14px'}} />
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1.3fr',gap:22,flex:1}}>
+        {/* Left: talking points */}
+        <div style={{display:'flex',flexDirection:'column',gap:14}}>
+          <Card title="What This Demonstrates">
+            <Bullets items={[
+              '<strong>One prompt, full solution</strong> — agent reads code, finds bugs, fixes them',
+              '<strong>Auto-approved tools</strong> — Read, Edit, Bash execute without human confirmation',
+              '<strong>Streaming output</strong> — real-time visibility into agent reasoning',
+              '<strong>Zero boilerplate</strong> — 15 lines of Python for a complete AI agent',
+            ]} />
+          </Card>
+          <Card title="Why It Matters for Your Team" titleColor="var(--green)">
+            <Bullets items={[
+              'Security analyst asks: <strong>"Fix the broken detection rule"</strong>',
+              'Agent reads the rule, identifies the logic error, patches it',
+              'Result streams back into your chat UI in real time',
+              '<strong>Streaming output</strong> — users see intermediate steps, never a blank wait',
+            ]} />
+          </Card>
+          <div style={{background:'rgba(245,158,11,.05)',border:'1px solid rgba(245,158,11,.18)',borderRadius:9,padding:'11px 15px'}}>
+            <div style={{fontSize:'.8rem',fontWeight:700,color:'var(--amber)',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:6}}>What to Watch For</div>
+            <div style={{fontSize:'.88rem',color:'var(--t2)',lineHeight:1.6}}>
+              The agent autonomously chains tool calls: <strong>Read</strong> (understand code) → <strong>Edit</strong> (apply fix) → <strong>Bash</strong> (verify fix). No orchestration code needed. <strong>allowed_tools</strong> restricts which tools the agent can use — sandboxed by default.
+            </div>
+          </div>
+        </div>
+
+        {/* Right: code */}
+        <div style={{display:'flex',flexDirection:'column',gap:10}}>
+          <div style={{fontSize:'.76rem',fontWeight:700,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'.08em'}}>Key SDK Usage</div>
+          <CodeBlock code={code} maxHeight="380px" />
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            {['query()', 'CortexCodeAgentOptions', 'AssistantMessage', 'ResultMessage'].map(t => (
+              <span key={t} style={{display:'inline-block',padding:'3px 9px',borderRadius:4,fontSize:'.66rem',fontWeight:600,background:'rgba(41,181,232,.08)',color:'var(--sf)',border:'1px solid rgba(41,181,232,.18)',fontFamily:'var(--font-mono)'}}>{t}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Slide 5: Demo 2 — Multi-Turn */
+function SlideDemo2({ onRunDemo }) {
+  const code = `async with CortexCodeSDKClient(
+    CortexCodeAgentOptions(
+        cwd=".",
+        allowed_tools=["Read", "Edit", "Bash"],
+    )
+) as client:
+
+    # Turn 1: Understand the code
+    await client.query(
+        "Summarize what threat_report.py does "
+        "and what security event schema it expects."
+    )
+    await print_response(client)
+
+    # Turn 2: Build on previous context
+    await client.query(
+        "Now add a function that flags anomalous "
+        "threat campaigns where the escalation "
+        "rate exceeds 2x the average, and write "
+        "tests for it."
+    )
+    await print_response(client)`;
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
+      <SfLogo label="Snowflake · Demo 2" />
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12}}>
+        <h2 style={{fontFamily:'var(--font-h)',fontSize:'2.0rem',fontWeight:800,letterSpacing:'-.015em',lineHeight:1.18,margin:0}}>
+          Demo 2: <span style={{color:'var(--sf)'}}>Multi-Turn Security Analysis</span>
+        </h2>
+        <Pill text="demo_multi_turn.py" color="purple" />
+        <RunLiveButton demo="multi_turn" onRun={onRunDemo} />
+      </div>
+      <div style={{width:40,height:2,background:'linear-gradient(90deg,var(--sf) 0%,rgba(41,181,232,.15) 100%)',borderRadius:1,margin:'0 0 14px'}} />
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1.3fr',gap:22,flex:1}}>
+        <div style={{display:'flex',flexDirection:'column',gap:14}}>
+          <Card title="What This Demonstrates">
+            <Bullets items={[
+              '<strong>Context retention</strong> — agent remembers Turn 1 when answering Turn 2',
+              '<strong>CortexCodeSDKClient</strong> — persistent session via async context manager',
+              '<strong>Building on analysis</strong> — first understand, then act on that understanding',
+            ]} />
+          </Card>
+          <Card title="Chat Integration" titleColor="var(--green)">
+            <Bullets items={[
+              'Chat conversations are inherently <strong>multi-turn</strong>',
+              'Analyst: "What happened with IP 198.51.100.42?"',
+              'Follow-up: "Now check if that IP appears in any other accounts"',
+              'The SDK maintains session state — <strong>no context re-injection needed</strong>',
+              'Map chat threads to SDK sessions — <strong>each user gets isolated context</strong>',
+            ]} />
+          </Card>
+          <div style={{background:'rgba(168,85,247,.05)',border:'1px solid rgba(168,85,247,.18)',borderRadius:9,padding:'11px 15px'}}>
+            <div style={{fontSize:'.8rem',fontWeight:700,color:'var(--purple)',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:6}}>Cost Efficiency</div>
+            <div style={{fontSize:'.88rem',color:'var(--t2)',lineHeight:1.6}}>
+              Turn 2 doesn't re-read the file — it already knows the code structure from Turn 1. This dramatically reduces <strong>token usage and latency</strong>. Context reuse means fewer API calls, lower credit consumption at scale.
+            </div>
+          </div>
+        </div>
+
+        <div style={{display:'flex',flexDirection:'column',gap:10}}>
+          <div style={{fontSize:'.76rem',fontWeight:700,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'.08em'}}>Session-Based API</div>
+          <CodeBlock code={code} maxHeight="380px" />
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            {['CortexCodeSDKClient', 'async with', 'client.query()', 'receive_response()'].map(t => (
+              <span key={t} style={{display:'inline-block',padding:'3px 9px',borderRadius:4,fontSize:'.66rem',fontWeight:600,background:'rgba(168,85,247,.08)',color:'var(--purple)',border:'1px solid rgba(168,85,247,.18)',fontFamily:'var(--font-mono)'}}>{t}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Slide 6: Demo 3 — Structured Output */
+function SlideDemo3({ onRunDemo }) {
+  const schema = `{
+  "type": "object",
+  "properties": {
+    "file": { "type": "string" },
+    "threats_found": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "line":        { "type": "integer" },
+          "severity":    { "enum": ["low","medium","high","critical"] },
+          "description": { "type": "string" },
+          "remediation": { "type": "string" }
+        },
+        "required": ["line","severity","description","remediation"]
+      }
+    },
+    "overall_risk": {
+      "enum": ["low","medium","high","critical"]
+    },
+    "summary": { "type": "string" }
+  },
+  "required": ["file","threats_found","overall_risk","summary"]
+}`;
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
+      <SfLogo label="Snowflake · Demo 3" />
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12}}>
+        <h2 style={{fontFamily:'var(--font-h)',fontSize:'2.0rem',fontWeight:800,letterSpacing:'-.015em',lineHeight:1.18,margin:0}}>
+          Demo 3: <span style={{color:'var(--sf)'}}>Structured Threat Assessment</span>
+        </h2>
+        <Pill text="demo_structured_output.py" color="amber" />
+        <RunLiveButton demo="structured_output" onRun={onRunDemo} />
+      </div>
+      <div style={{width:40,height:2,background:'linear-gradient(90deg,var(--sf) 0%,rgba(41,181,232,.15) 100%)',borderRadius:1,margin:'0 0 14px'}} />
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1.2fr',gap:22,flex:1}}>
+        <div style={{display:'flex',flexDirection:'column',gap:14}}>
+          <Card title="What This Demonstrates">
+            <Bullets items={[
+              '<strong>JSON Schema enforcement</strong> — agent must return valid, typed output',
+              '<strong>Machine-readable results</strong> — parse directly into downstream systems',
+              '<strong>output_format</strong> option — one config parameter, no prompt hacking',
+            ]} />
+          </Card>
+          <Card title="How Your Team Uses This" titleColor="var(--green)">
+            <Bullets items={[
+              'Agent returns <strong>structured threat assessment</strong> instead of free text',
+              'Your chat UI formats results into <strong>rich cards, tables, severity badges</strong>',
+              'Downstream: auto-create Jira tickets, trigger SOAR playbooks',
+              'Consistent schema = <strong>testable, auditable</strong> output',
+              '<strong>Compliance-ready</strong> — every response conforms to a validated schema, logged in ACCESS_HISTORY',
+            ]} />
+          </Card>
+          <Card title="SDK Config" titleColor="var(--amber)" style={{padding:'12px 14px'}}>
+            <CodeBlock code={`options=CortexCodeAgentOptions(
+    output_format={
+        "type": "json_schema",
+        "schema": THREAT_ASSESSMENT_SCHEMA,
+    },
+)`} />
+          </Card>
+        </div>
+
+        <div style={{display:'flex',flexDirection:'column',gap:10}}>
+          <div style={{fontSize:'.76rem',fontWeight:700,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'.08em'}}>Threat Assessment JSON Schema</div>
+          <CodeBlock code={schema} maxHeight="420px" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Slide 7: Demo 4 — Chat Integration (Flagship) — with LiveChat */
+function SlideChatEmbed({ onRunDemo, chatState }) {
+  const code = `# Inside your chat platform's message handler
+async def handle_security_query(user_msg, session):
+    async with CortexCodeSDKClient(
+        CortexCodeAgentOptions(
+            cwd="/data/security-workspace",
+            allowed_tools=["Read", "Bash", "sql_execute"],
+            output_format={
+                "type": "json_schema",
+                "schema": THREAT_ASSESSMENT_SCHEMA,
+            },
+        )
+    ) as agent:
+        await agent.query(user_msg)
+        async for msg in agent.receive_response():
+            if isinstance(msg, AssistantMessage):
+                for block in msg.content:
+                    if hasattr(block, "text"):
+                        yield stream_to_chat(block.text)`;
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',height:'100%',padding:'20px 44px 72px'}}>
+      <SfLogo label="Snowflake · Flagship Demo" />
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
+        <h2 style={{fontFamily:'var(--font-h)',fontSize:'1.9rem',fontWeight:800,letterSpacing:'-.015em',lineHeight:1.18,margin:0}}>
+          Demo 4: <span style={{color:'var(--sf)'}}>Embedding in Chat</span>
+        </h2>
+        <span style={{display:'inline-flex',alignItems:'center',padding:'3px 10px',borderRadius:20,fontSize:'.65rem',fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',background:'rgba(41,181,232,.1)',color:'var(--sf)',border:'1px solid rgba(41,181,232,.25)'}}>Flagship</span>
+        <RunLiveButton demo="chat_embed" onRun={onRunDemo} />
+      </div>
+      <div style={{width:40,height:2,background:'linear-gradient(90deg,var(--sf) 0%,rgba(41,181,232,.15) 100%)',borderRadius:1,margin:'0 0 12px'}} />
+
+      <div style={{display:'grid',gridTemplateColumns:'1.1fr 1fr',gap:18,flex:1,minHeight:0}}>
+        {/* Left: Code + arch */}
+        <div style={{display:'flex',flexDirection:'column',gap:12,minHeight:0}}>
+          <div style={{fontSize:'.76rem',fontWeight:700,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'.08em'}}>Chat Integration Code</div>
+          <CodeBlock code={code} maxHeight="240px" />
+          {/* Mini architecture */}
+          <Card title="Integration Architecture" style={{padding:'12px 14px'}}>
+            <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap',fontSize:'.72rem'}}>
+              {['Chat UI','SDK Client','Cortex API','Snowflake'].map((n,i) => (
+                <React.Fragment key={i}>
+                  <div style={{background:i===0?'rgba(0,120,212,.2)':'rgba(41,181,232,.15)',border:`1px solid ${i===0?'rgba(0,120,212,.3)':'rgba(41,181,232,.25)'}`,borderRadius:6,padding:'5px 10px',fontWeight:600,color:'var(--txt)',fontSize:'.72rem'}}>{n}</div>
+                  {i < 3 && <span style={{color:'var(--sf)',fontWeight:700}}>→</span>}
+                </React.Fragment>
+              ))}
+            </div>
+            <div style={{fontSize:'.7rem',color:'var(--t3)',marginTop:8}}>
+              User query → SDK handles agent lifecycle → Cortex runs inference → results stream back to chat
+            </div>
+          </Card>
+        </div>
+
+        {/* Right: LiveChat */}
+        <div style={{display:'flex',flexDirection:'column',gap:12,minHeight:0}}>
+          <div style={{fontSize:'.76rem',fontWeight:700,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'.08em'}}>Live Security Assistant</div>
+          <LiveChat chatState={chatState} />
+          <div style={{background:'rgba(16,185,129,.05)',border:'1px solid rgba(16,185,129,.18)',borderRadius:9,padding:'10px 14px'}}>
+            <div style={{fontSize:'.8rem',fontWeight:700,color:'var(--green)',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:5}}>Key Takeaway</div>
+            <div style={{fontSize:'.86rem',color:'var(--t2)',lineHeight:1.55}}>
+              The SDK handles all complexity: streaming, tool orchestration, context management, structured output. Your chat platform just forwards the user message and renders the streamed response.
+            </div>
+          </div>
+          <div style={{background:'rgba(168,85,247,.05)',border:'1px solid rgba(168,85,247,.18)',borderRadius:9,padding:'10px 14px'}}>
+            <div style={{fontSize:'.8rem',fontWeight:700,color:'var(--purple)',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:5}}>Production-Ready</div>
+            <div style={{fontSize:'.86rem',color:'var(--t2)',lineHeight:1.55}}>
+              <strong>SSO/key-pair auth</strong> for the backend service account. <strong>cwd</strong> sandboxes the agent to /data/security-workspace. <strong>Resource monitors</strong> cap credit usage. Users never touch Snowflake directly — the chat platform is the only interface.
+            </div>
+          </div>
+          <div style={{background:'rgba(125,211,252,.05)',border:'1px solid rgba(125,211,252,.18)',borderRadius:9,padding:'10px 14px'}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+              <span style={{fontSize:'.6rem',fontWeight:700,color:'#7dd3fc',background:'rgba(125,211,252,.1)',border:'1px solid rgba(125,211,252,.3)',borderRadius:4,padding:'2px 7px',letterSpacing:'.06em'}}>UX</span>
+              <div style={{fontSize:'.74rem',color:'var(--txt)',fontWeight:600}}>"What does the business user experience look like?"</div>
+            </div>
+            <div style={{fontSize:'.72rem',color:'var(--t2)',lineHeight:1.5}}>SDK streaming output renders in any UI. Structured JSON maps to rich cards, tables, and badges. Your chat platform <strong>is</strong> the user interface — no terminal required.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Slide 8: Governance, Cost & Access Control */
+function SlideGovernance() {
+  return (
+    <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
+      <SfLogo label="Snowflake · Governance" />
+      <h2 style={{fontFamily:'var(--font-h)',fontSize:'2.0rem',fontWeight:800,marginBottom:4,letterSpacing:'-.015em',lineHeight:1.18}}>
+        Governance, Cost & <span style={{color:'var(--sf)'}}>Access Control</span>
+      </h2>
+      <div style={{width:40,height:2,background:'linear-gradient(90deg,var(--sf) 0%,rgba(41,181,232,.15) 100%)',borderRadius:1,margin:'7px 0 15px'}} />
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:14,flex:1}}>
+        {/* Column 1: Cost & Compute Controls */}
+        <div style={{display:'flex',flexDirection:'column',gap:12}}>
+          <Card title="Cost & Compute Controls" titleColor="var(--orange)" highlight>
+            <Bullets items={[
+              '<strong>Warehouse resource monitors</strong> — set credit quotas per warehouse, auto-suspend on threshold',
+              '<strong>Per-session token caps</strong> — limit token consumption per SDK session to control spend',
+              '<strong>Warehouse auto-suspend</strong> — idle warehouses suspend in seconds, zero cost when not in use',
+              '<strong>Query cost attribution</strong> — every SDK query tagged to user/role via QUERY_HISTORY',
+              '<strong>Warehouse size control</strong> — assign XS warehouse for chat queries, limit compute blast radius',
+            ]} />
+          </Card>
+          <Card title="Cost Visibility" titleColor="var(--amber)">
+            <CodeBlock code={`-- Monitor SDK credit consumption
+SELECT warehouse_name,
+       SUM(credits_used) as total_credits
+FROM SNOWFLAKE.ACCOUNT_USAGE
+  .WAREHOUSE_METERING_HISTORY
+WHERE warehouse_name = 'CHAT_WH'
+GROUP BY 1;
+
+-- Set resource monitor
+CREATE RESOURCE MONITOR chat_monitor
+  WITH CREDIT_QUOTA = 100
+  TRIGGERS ON 75 PERCENT DO NOTIFY
+           ON 100 PERCENT DO SUSPEND;`} />
+          </Card>
+        </div>
+        {/* Column 2: Access & Auth */}
+        <div style={{display:'flex',flexDirection:'column',gap:12}}>
+          <Card title="Authentication & SSO" titleColor="var(--green)">
+            <Bullets items={[
+              '<strong>SSO via SAML/OAuth</strong> — integrates with Okta, Azure AD, any SAML 2.0 IdP',
+              '<strong>Programmatic access tokens</strong> — service accounts for chat backend, no manual token creation needed',
+              '<strong>Key-pair auth</strong> — RSA key-pair for non-interactive SDK connections',
+              '<strong>Okta group mapping</strong> — map Okta groups to Snowflake roles automatically',
+            ]} />
+            <div style={{background:'rgba(16,185,129,.05)',border:'1px solid rgba(16,185,129,.18)',borderRadius:7,padding:'8px 10px',marginTop:8}}>
+              <div style={{fontSize:'.68rem',fontWeight:600,color:'var(--green)',marginBottom:3}}>Common Ask: "Can we automate provisioning?"</div>
+              <div style={{fontSize:'.72rem',color:'var(--t2)',lineHeight:1.5}}>
+                Yes — SCIM provisioning + Okta group-to-role mapping means no manual token management. Users authenticate via SSO, roles assigned automatically.
+              </div>
+            </div>
+          </Card>
+          <Card title="RBAC via Snowflake Roles" titleColor="var(--purple)">
+            <CodeBlock code={`-- Chat service role setup
+GRANT ROLE cortex_agent_user
+  TO ROLE chat_svc;
+
+-- Scoped to security data only
+GRANT SELECT ON DATABASE security_logs
+  TO ROLE chat_svc;
+
+-- Row-level security + masking
+-- apply automatically
+-- ACCESS_HISTORY for audit trail`} />
+          </Card>
+        </div>
+        {/* Column 3: Agent Controls & Skills */}
+        <div style={{display:'flex',flexDirection:'column',gap:12}}>
+          <Card title="Agent Sandboxing">
+            <Bullets items={[
+              '<strong>allowed_tools</strong> — restrict to Read-only, or enable Edit/Bash/SQL per role',
+              '<strong>output_format</strong> — enforce structured JSON for auditability',
+              '<strong>cwd (working directory)</strong> — sandbox agent to specific paths only',
+              '<strong>Managed settings</strong> — admin configures centrally, users cannot override',
+            ]} />
+          </Card>
+          <Card title="Skill Governance" titleColor="var(--amber)">
+            <Bullets items={[
+              '<strong>Admin-controlled global skills</strong> — deploy approved skills org-wide via Git',
+              '<strong>Per-user skills</strong> — users can add personal skills in ~/.snowflake/cortex/skills/',
+              '<strong>Disable skill uploads</strong> — admins can restrict who uploads skills',
+              '<strong>Portable</strong> — same skill works in CLI, SDK, and Snowsight',
+              '<strong>Claude Code compatible</strong> — minimal changes to port existing skills',
+            ]} />
+          </Card>
+        </div>
+      </div>
+
+      {/* Anticipated Questions — redistributed from Q&A slide */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginTop:10}}>
+        <div style={{background:'rgba(255,159,54,.05)',border:'1px solid rgba(255,159,54,.18)',borderRadius:8,padding:'9px 12px'}}>
+          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+            <span style={{fontSize:'.58rem',fontWeight:700,color:'var(--orange)',background:'rgba(255,159,54,.1)',border:'1px solid rgba(255,159,54,.3)',borderRadius:4,padding:'1px 6px',letterSpacing:'.06em'}}>COST</span>
+            <div style={{fontSize:'.72rem',color:'var(--txt)',fontWeight:600,lineHeight:1.3}}>"How do we control costs at scale?"</div>
+          </div>
+          <div style={{fontSize:'.7rem',color:'var(--t2)',lineHeight:1.5}}>Dedicated XS/S warehouse with resource monitor + auto-suspend. Per-session token caps. Zero cost when idle. Full attribution via QUERY_HISTORY.</div>
+        </div>
+        <div style={{background:'rgba(245,158,11,.05)',border:'1px solid rgba(245,158,11,.18)',borderRadius:8,padding:'9px 12px'}}>
+          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+            <span style={{fontSize:'.58rem',fontWeight:700,color:'var(--amber)',background:'rgba(245,158,11,.1)',border:'1px solid rgba(245,158,11,.3)',borderRadius:4,padding:'1px 6px',letterSpacing:'.06em'}}>GOV</span>
+            <div style={{fontSize:'.72rem',color:'var(--txt)',fontWeight:600,lineHeight:1.3}}>"Who manages skill uploads?"</div>
+          </div>
+          <div style={{fontSize:'.7rem',color:'var(--t2)',lineHeight:1.5}}>Admins control global skills via Git. Per-user skills scoped to their session. Admin settings restrict upload permissions. Skills are versioned and auditable.</div>
+        </div>
+        <div style={{background:'rgba(16,185,129,.05)',border:'1px solid rgba(16,185,129,.18)',borderRadius:8,padding:'9px 12px'}}>
+          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+            <span style={{fontSize:'.58rem',fontWeight:700,color:'var(--green)',background:'rgba(16,185,129,.1)',border:'1px solid rgba(16,185,129,.3)',borderRadius:4,padding:'1px 6px',letterSpacing:'.06em'}}>AUTH</span>
+            <div style={{fontSize:'.72rem',color:'var(--txt)',fontWeight:600,lineHeight:1.3}}>"Can we automate auth?"</div>
+          </div>
+          <div style={{fontSize:'.7rem',color:'var(--t2)',lineHeight:1.5}}>SSO via SAML/OAuth (Okta, Azure AD). Key-pair auth for service accounts. SCIM provisioning maps groups to roles automatically. No manual tokens.</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Slide 10: Unstructured Data & Agentic Search */
+function SlideUnstructured() {
+  return (
+    <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
+      <SfLogo label="Snowflake · Next Steps" />
+      <h2 style={{fontFamily:'var(--font-h)',fontSize:'2.0rem',fontWeight:800,marginBottom:4,letterSpacing:'-.015em',lineHeight:1.18}}>
+        Unstructured Data & <span style={{color:'var(--sf)'}}>Agentic Search</span>
+      </h2>
+      <div style={{width:40,height:2,background:'linear-gradient(90deg,var(--sf) 0%,rgba(41,181,232,.15) 100%)',borderRadius:1,margin:'7px 0 15px'}} />
+      <p style={{fontSize:'.96rem',color:'var(--t2)',marginBottom:18,lineHeight:1.55}}>
+        Beyond structured data — combining document intelligence with agentic workflows for comprehensive security analysis.
+      </p>
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:16,flex:1}}>
+        <Card title="Cortex Search" titleColor="var(--sf)" highlight>
+          <Bullets items={[
+            '<strong>PDF, PowerPoint, doc ingestion</strong> — security runbooks, threat intel reports',
+            '<strong>Semantic search</strong> — natural language queries over documents',
+            '<strong>3 lines of SQL</strong> to index a table',
+            'No vector DB or embedding pipeline to manage',
+          ]} />
+          <div style={{marginTop:12}}>
+            <CodeBlock code={`CREATE CORTEX SEARCH SERVICE
+  threat_intel_search
+  ON threat_reports
+   WAREHOUSE = chat_wh;`} />
+          </div>
+        </Card>
+
+        <Card title="Cortex Agent" titleColor="var(--green)">
+          <Bullets items={[
+            '<strong>Combined structured + unstructured</strong> queries in a single agent',
+            'Agent decides: SQL query for logs, or semantic search for docs',
+            '<strong>Tool chaining</strong> — search runbook → query logs → generate report',
+            'Multi-modal: text, tables, and document excerpts in one response',
+          ]} />
+          <div style={{background:'rgba(16,185,129,.05)',border:'1px solid rgba(16,185,129,.18)',borderRadius:7,padding:'10px 12px',marginTop:12}}>
+            <div style={{fontSize:'.72rem',fontWeight:600,color:'var(--green)',marginBottom:4}}>Example Query</div>
+            <div style={{fontSize:'.86rem',color:'var(--t2)',lineHeight:1.5,fontStyle:'italic'}}>
+              "What's the recommended response playbook for a CrowdStrike FDR alert with lateral movement indicators — and show me the last 5 similar incidents."
+            </div>
+          </div>
+        </Card>
+
+        <Card title="Deep Research Reports" titleColor="var(--orange)">
+          <div style={{fontSize:'.82rem',color:'var(--t2)',lineHeight:1.65,marginBottom:14}}>
+            Synthesize across multiple data sources in a single agent conversation:
+          </div>
+          <Bullets items={[
+            '<strong>Snowflake access logs</strong> → who accessed what, when',
+            '<strong>Threat intel PDFs</strong> → known attack patterns',
+            '<strong>Security runbooks</strong> → recommended response steps',
+            '<strong>Historical incidents</strong> → pattern matching & trends',
+          ]} />
+          <div style={{marginTop:14,padding:'10px 12px',background:'rgba(255,159,54,.06)',border:'1px solid rgba(255,159,54,.18)',borderRadius:7}}>
+            <div style={{fontSize:'.72rem',fontWeight:600,color:'var(--orange)',marginBottom:4}}>End State</div>
+            <div style={{fontSize:'.86rem',color:'var(--t2)',lineHeight:1.5}}>
+              Your chat platform generates comprehensive security reports combining real-time data with institutional knowledge — automatically.
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Anticipated Question */}
+      <div style={{background:'rgba(41,181,232,.05)',border:'1px solid rgba(41,181,232,.18)',borderRadius:8,padding:'9px 12px',marginTop:10}}>
+        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+          <span style={{fontSize:'.66rem',fontWeight:700,color:'var(--sf)',background:'rgba(41,181,232,.1)',border:'1px solid rgba(41,181,232,.3)',borderRadius:4,padding:'1px 6px',letterSpacing:'.06em'}}>DATA</span>
+          <div style={{fontSize:'.72rem',color:'var(--txt)',fontWeight:600}}>"Can the agent access unstructured data — PDFs, PowerPoints, threat intel?"</div>
+        </div>
+        <div style={{fontSize:'.7rem',color:'var(--t2)',lineHeight:1.5}}>Cortex Search indexes documents in 3 lines of SQL. Cortex Agent combines structured queries (Analyst) + unstructured search in one conversation. Multi-modal file support included.</div>
+      </div>
+    </div>
+  );
+}
+
+/* Slide 10: Next Steps & Resources */
+function SlideNextSteps() {
+  const steps = [
+    {n:'1',text:'SDK Access & Sandbox Setup',sub:'Get your engineering team access to the Cortex Code Agent SDK preview. Stand up a sandbox Snowflake account for integration testing.',owner:'Snowflake SE + Customer Eng'},
+    {n:'2',text:'Single-Turn POC in Chat',sub:'Embed demo_single_turn.py pattern into your chat platform. Validate streaming, error handling, and response rendering end-to-end.',owner:'Customer Engineering'},
+    {n:'3',text:'Multi-Turn Session Integration',sub:'Implement CortexCodeSDKClient session management. Map chat conversation threads to SDK sessions.',owner:'Customer Engineering'},
+    {n:'4',text:'Structured Output for Threat Cards',sub:'Define JSON schemas for chat security response cards. Integrate output_format with chat rendering pipeline.',owner:'Joint Engineering'},
+    {n:'5',text:'Cortex Search for Unstructured Intel',sub:'Index security runbooks and threat intel docs. Enable combined structured+unstructured queries via Cortex Agent.',owner:'Snowflake SE + Customer Data'},
+  ];
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
+      <SfLogo label="Snowflake · Next Steps" />
+      <h2 style={{fontFamily:'var(--font-h)',fontSize:'2.0rem',fontWeight:800,marginBottom:4,letterSpacing:'-.015em',lineHeight:1.18}}>
+        Next Steps & <span style={{color:'var(--sf)'}}>Resources</span>
+      </h2>
+      <div style={{width:40,height:2,background:'linear-gradient(90deg,var(--sf) 0%,rgba(41,181,232,.15) 100%)',borderRadius:1,margin:'7px 0 15px'}} />
+
+      <div style={{display:'grid',gridTemplateColumns:'1.3fr 1fr',gap:22,flex:1}}>
+        <div style={{display:'flex',flexDirection:'column',gap:11}}>
+          {steps.map(s => (
+            <div key={s.n} style={{background:'var(--s1)',border:'1px solid var(--bdr)',borderRadius:12,padding:'13px 18px',display:'grid',gridTemplateColumns:'32px 1fr auto',gap:14,alignItems:'center'}}>
+              <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(41,181,232,.15)',border:'1px solid rgba(41,181,232,.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'.85rem',fontWeight:700,color:'var(--sf)'}}>{s.n}</div>
+              <div>
+                <div style={{fontSize:'.83rem',color:'var(--txt)',fontWeight:500}}>{s.text}</div>
+                <div style={{fontSize:'.71rem',color:'var(--t2)',marginTop:2}}>{s.sub}</div>
+              </div>
+              <div style={{fontSize:'.68rem',color:'var(--t3)',whiteSpace:'nowrap',fontWeight:500}}>{s.owner}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{display:'flex',flexDirection:'column',gap:14}}>
+          <Card title="Resources" highlight>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {[
+                {label:'Cortex REST API',desc:'OpenAI & Anthropic-compatible endpoint'},
+                {label:'Cortex Agents REST API',desc:'Multi-tool agent orchestration'},
+                {label:'Cortex Code Agent SDK Docs',desc:'Python & TypeScript reference'},
+                {label:'Cortex Search',desc:'Semantic search over documents & tables'},
+              ].map((r,i) => (
+                <div key={i} style={{padding:'8px 12px',background:'var(--s1)',border:'1px solid var(--bdr)',borderRadius:8}}>
+                  <div style={{fontSize:'.78rem',fontWeight:600,color:'var(--sf)'}}>{r.label}</div>
+                  <div style={{fontSize:'.68rem',color:'var(--t3)',marginTop:2}}>{r.desc}</div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <div style={{background:'rgba(41,181,232,.05)',borderLeft:'3px solid var(--sf)',borderRadius:'0 10px 10px 0',padding:'14px 18px'}}>
+            <div style={{fontSize:'.88rem',color:'var(--t2)',lineHeight:1.6,fontStyle:'italic'}}>
+              "The demo scripts are self-contained — clone the repo, set your Snowflake credentials, and run. No infrastructure setup needed."
+            </div>
+            <div style={{fontSize:'.71rem',color:'var(--t3)',fontWeight:600,marginTop:7}}>
+              Try it: python demo_single_turn.py
+            </div>
+          </div>
+
+          <Card title="Safe Harbor" titleColor="var(--t3)" style={{padding:'12px 14px'}}>
+            <div style={{fontSize:'.7rem',color:'var(--t3)',lineHeight:1.6}}>
+              Roadmap items are directional and not a commitment. Actual timing may differ. See Snowflake's Safe Harbor statement.
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════
+   MAIN APP
+   ════════════════════════════════════════════ */
+const SLIDES = [
+  { component: SlideTitle, label: 'Title', demo: null },
+  { component: SlideWhatIs, label: 'What is SDK', demo: null },
+  { component: SlideArchitecture, label: 'Architecture', demo: null },
+  { component: SlideDemo1, label: 'Demo: Single-Turn', demo: 'single_turn' },
+  { component: SlideDemo2, label: 'Demo: Multi-Turn', demo: 'multi_turn' },
+  { component: SlideDemo3, label: 'Demo: Structured', demo: 'structured_output' },
+  { component: SlideChatEmbed, label: 'Live Chat', demo: 'chat_embed' },
+  { component: SlideGovernance, label: 'Governance & Cost', demo: null },
+  { component: SlideUnstructured, label: 'Unstructured Data', demo: null },
+  { component: SlideNextSteps, label: 'Next Steps', demo: null },
+];
+
+
+
+function App() {
+  const [current, setCurrent] = useState(0);
+  const [prevSlide, setPrevSlide] = useState(-1);
+  const [activeTerminal, setActiveTerminal] = useState(null); // {demo, slideIdx}
+  const N = SLIDES.length;
+
+  // Persistent chat state — survives navigation away from slide 7
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatSessionId] = useState(() => crypto.randomUUID());
+  const chatState = {messages: chatMessages, setMessages: setChatMessages, sessionId: chatSessionId};
+
+  const goTo = useCallback((n) => {
+    if (n === current || n < 0 || n >= N) return;
+    setPrevSlide(current);
+    setCurrent(n);
+    setTimeout(() => setPrevSlide(-1), 500);
+  }, [current, N]);
+
+  const go = useCallback((d) => goTo(current + d), [current, goTo]);
+
+
+  function handleRunDemo(demo) {
+    setActiveTerminal({demo, slideIdx: current});
+  }
+
+  useEffect(() => {
+    const handler = (e) => {
+      // Don't capture keys when typing in chat input
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(1); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+      else if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+      else if (e.key === 'End') { e.preventDefault(); goTo(N - 1); }
+      else if (e.key === 'Escape' && activeTerminal) { setActiveTerminal(null); }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [go, goTo, N, activeTerminal]);
+
+  const termOpen = !!activeTerminal;
+  const TERM_WIDTH = '42vw';
+
+  return (
+    <>
+      {/* Main flex container: slides + terminal side panel */}
+      <div style={{display:'flex',width:'100vw',height:'100vh',overflow:'hidden'}}>
+
+        {/* Slide area — shrinks when terminal opens */}
+        <div style={{
+          flex:1,position:'relative',height:'100vh',overflow:'hidden',
+          transition:'flex .4s cubic-bezier(.22,1,.36,1)',
+          minWidth:0,
+        }}>
+          {SLIDES.map((s, i) => {
+            const active = i === current;
+            const direction = i === prevSlide ? 'prev' : 'next';
+            const SlideComponent = s.component;
+            const extraProps = {};
+            if (s.demo) extraProps.onRunDemo = handleRunDemo;
+            if (i === 6) extraProps.chatState = chatState;
+            return (
+              <Slide key={i} active={active} direction={direction}
+                     padding={i === 6 ? '20px 44px 72px' : undefined}>
+                <SlideComponent {...extraProps} />
+              </Slide>
+            );
+          })}
+        </div>
+
+        {/* Terminal right panel */}
+        {termOpen && (
+          <DemoTerminal
+            demo={activeTerminal.demo}
+            onClose={() => setActiveTerminal(null)}
+          />
+        )}
+      </div>
+
+      {/* Progress bar */}
+      <div style={{position:'fixed',top:0,left:0,height:3,background:'linear-gradient(90deg,var(--sf),var(--sf3))',width:`${((current+1)/N)*100}%`,transition:'width .38s ease',zIndex:200}} />
+
+      {/* Navigation */}
+      <div style={{
+        position:'fixed',bottom:16,
+        left: termOpen ? `calc((100vw - ${TERM_WIDTH}) / 2)` : '50%',
+        transform:'translateX(-50%)',
+        display:'flex',alignItems:'center',gap:10,
+        background:'rgba(7,18,31,.97)',border:'1px solid var(--bdr3)',borderRadius:14,
+        padding:'8px 16px',backdropFilter:'blur(24px)',zIndex:100,
+        boxShadow:'0 6px 28px rgba(0,0,0,.55),0 1px 0 rgba(255,255,255,.04) inset',
+        transition:'left .4s cubic-bezier(.22,1,.36,1)',
+      }}>
+        <button onClick={() => go(-1)} disabled={current === 0}
+          style={{background:'none',border:'1px solid var(--bdr)',borderRadius:6,color: current === 0 ? 'var(--t3)' : 'var(--t2)',padding:'5px 13px',fontSize:'.72rem',fontFamily:'var(--font-b)',fontWeight:600,cursor: current === 0 ? 'not-allowed' : 'pointer',opacity: current === 0 ? .25 : 1,transition:'all .16s',letterSpacing:'.03em'}}
+          onMouseEnter={e => { if (current !== 0) { e.currentTarget.style.borderColor = 'rgba(41,181,232,.3)'; e.currentTarget.style.color = 'var(--sf)'; }}}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--bdr)'; e.currentTarget.style.color = current === 0 ? 'var(--t3)' : 'var(--t2)'; }}>
+          ← Prev
+        </button>
+
+        {/* Dots */}
+        <div style={{display:'flex',gap:5,alignItems:'center'}}>
+          {SLIDES.map((_, i) => (
+            <button key={i} onClick={() => goTo(i)}
+              style={{
+                width: i === current ? 14 : 5,height:5,borderRadius: i === current ? 3 : '50%',
+                background: i === current ? 'var(--sf)' : 'var(--t3)',
+                transition:'all .22s',cursor:'pointer',border:'none',padding:0,
+                boxShadow: i === current ? '0 0 6px rgba(41,181,232,.45)' : 'none',
+              }}
+              title={SLIDES[i].label}
+            />
+          ))}
+        </div>
+
+        <span style={{fontSize:'.64rem',color:'var(--t3)',minWidth:40,textAlign:'center',fontFamily:'var(--font-b)',fontWeight:600,letterSpacing:'.06em'}}>
+          {current + 1} / {N}
+        </span>
+
+        <button onClick={() => go(1)} disabled={current === N - 1}
+          style={{background:'none',border:'1px solid var(--bdr)',borderRadius:6,color: current === N-1 ? 'var(--t3)' : 'var(--t2)',padding:'5px 13px',fontSize:'.72rem',fontFamily:'var(--font-b)',fontWeight:600,cursor: current === N-1 ? 'not-allowed' : 'pointer',opacity: current === N-1 ? .25 : 1,transition:'all .16s',letterSpacing:'.03em'}}
+          onMouseEnter={e => { if (current !== N-1) { e.currentTarget.style.borderColor = 'rgba(41,181,232,.3)'; e.currentTarget.style.color = 'var(--sf)'; }}}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--bdr)'; e.currentTarget.style.color = current === N-1 ? 'var(--t3)' : 'var(--t2)'; }}>
+          Next →
+        </button>
+
+      </div>
+
+      {/* Keyboard shortcut hint — visible on title slide */}
+      {current === 0 && (
+        <div style={{
+          position:'fixed',bottom:62,
+          left: termOpen ? `calc((100vw - ${TERM_WIDTH}) / 2)` : '50%',
+          transform:'translateX(-50%)',
+          fontSize:'.58rem',color:'var(--t3)',fontFamily:'var(--font-mono)',letterSpacing:'.04em',
+          opacity:.65,animation:'msgFadeIn .5s ease-out',
+          transition:'left .4s cubic-bezier(.22,1,.36,1)',
+        }}>
+          ← → arrow keys to navigate · ESC to close terminal
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ─── Particle Canvas ─── */
+const canvas = document.getElementById('bg');
+const ctx = canvas.getContext('2d');
+let W, H, pts = [];
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  pts = Array.from({length: 55}, () => ({
+    x: Math.random() * W, y: Math.random() * H,
+    vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35,
+    r: Math.random() * 1.8 + .8
+  }));
+}
+resize();
+window.addEventListener('resize', resize);
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  pts.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < 0 || p.x > W) p.vx *= -1;
+    if (p.y < 0 || p.y > H) p.vy *= -1;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(41,181,232,0.35)'; ctx.fill();
+  });
+  for (let i = 0; i < pts.length; i++)
+    for (let j = i + 1; j < pts.length; j++) {
+      const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < 130) {
+        ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y);
+        ctx.strokeStyle = `rgba(41,181,232,${(1 - d / 130) * .12})`;
+        ctx.lineWidth = .8; ctx.stroke();
+      }
+    }
+  requestAnimationFrame(draw);
+}
+draw();
+
+/* ─── Mount React App ─── */
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
