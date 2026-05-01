@@ -9,7 +9,9 @@ __pycache__/
 
 # Internal / sensitive
 transcript.md
+050126transcript.md
 email_thread.md
+followup_email.md
 plans/
 examples/
 
